@@ -15,6 +15,11 @@ class threadsafe_queue{
             data_queue.push(std::move(new_value));
             data_cond.notify_one();
           }
+         // in this implementation only one thread is woken up by notify_one() so if make_shared throws an error then 
+         // that thread exists due to exception but no other threads are notified so all other stay stuck waiting forever
+
+         //solution is that we ca use notify_all () but it is inefficeint because only one thread gets the data - others should go
+         //back to sleep
 
           void wait_and_pop(T& value){
             std::unique_lock<std::mutex> lk(mut);
@@ -117,3 +122,19 @@ int main(){
 
 
 }
+//solution to this is store shared_ptr<T> directly in queue
+
+// void push(T new_value){
+//     std::shared_ptr<T> data = std::make_shared<T>(std::move(new_value)); if there is error in this step then no thread is woken up so nothing is lost
+//     std::lock_guard<std::mutex> lk(mut);
+//     data_queue.push(data);
+//     data_cond.notify_one();
+// }
+
+// std::shared_ptr<T> wait and pop(){
+//     std::unique_lock<std::mutex> lk(mut);
+//     data_cond.wait(lk, [this] {return !data_queue.empty();}); 
+//     std::shared_ptr<T> res = data_queue.front(); this is function is guranteed to not throw the exception because it is no except in c++
+//     data_queue.pop();
+//     return res;
+// }
